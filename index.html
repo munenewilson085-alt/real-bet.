@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#071b16">
+<title>Real Bet | Football Demo</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#071b16;color:#f3f7f4;font-family:Arial,sans-serif}
+header{background:#0e3025;padding:20px 16px;border-bottom:2px solid #26c281}
+.brand{font-size:27px;font-weight:900;color:#48e6a0}
+small,.muted{color:#aabdb4}
+main{max-width:700px;margin:auto;padding:15px}
+.balance{background:#123d2d;padding:17px;border-radius:14px;margin-bottom:18px}
+.amount{font-size:27px;font-weight:bold;margin-top:5px}
+h2{font-size:19px;margin-top:22px}
+.match,.panel{background:#112a22;border:1px solid #25483a;border-radius:12px;padding:14px;margin:12px 0}
+.league{font-size:12px;color:#9bb9aa;margin-bottom:12px}
+.teams{font-size:16px;font-weight:bold;margin-bottom:13px}
+.odds{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+button{cursor:pointer;border:0;border-radius:8px;padding:12px;font-weight:bold}
+.pick{background:#234438;color:white}
+.pick span{display:block;color:#5cf0ad;margin-top:5px}
+.pick.selected{background:#167c53;outline:2px solid #5cf0ad}
+.primary{background:#37d993;color:#062318;width:100%;margin-top:10px}
+.secondary{background:#29443a;color:white}
+input{width:100%;padding:13px;border-radius:8px;border:1px solid #486657;background:#071b16;color:white;font-size:16px;margin-top:7px}
+.notice{font-size:12px;color:#b9c9c1;line-height:1.6}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}
+#message{color:#5cf0ad;margin-top:10px;font-size:14px}
+footer{text-align:center;padding:25px;color:#aabdb4;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">⚽ REAL BET</div>
+  <small>FOOTBALL PREDICTIONS · DEMO ONLY</small>
+</header>
+<main>
+  <div class="balance">
+    <small>YOUR VIRTUAL BALANCE</small>
+    <div class="amount" id="balance">KSh 1,000</div>
+    <small>Play coins only — no real money</small>
+  </div>
+
+  <div class="notice">
+    These are fictional demo fixtures and sample odds,
+    not live matches or real betting offers.
+  </div>
+
+  <h2>⚽ Demo matches</h2>
+  <div id="matches"></div>
+
+  <h2>🎟️ Your bet slip</h2>
+  <div class="panel">
+    <div id="selection" class="muted">Choose an outcome above.</div>
+    <label for="stake">Stake (virtual KSh)</label>
+    <input id="stake" type="number" min="1" step="1"
+      value="100" inputmode="numeric">
+    <p class="row"><span class="muted">Potential return</span>
+      <strong id="return">KSh 0</strong></p>
+    <button class="primary" id="place">Place demo bet</button>
+    <div id="message" role="status"></div>
+  </div>
+
+  <h2>📋 My demo bets</h2>
+  <div id="bets"></div>
+  <button class="secondary" id="reset">Reset demo account</button>
+  <p class="notice">
+    Demo only. Results are randomly simulated, not actual match
+    results. No deposits, cashouts, or real winnings.
+  </p>
+</main>
+<footer>REAL BET · LEARN AND PLAY RESPONSIBLY</footer>
+
+<script>
+const fixtures = [
+ {id:1,league:"DEMO PREMIER LEAGUE",
+  home:"Nairobi Stars",away:"Mombasa United",
+  odds:[2.10,3.20,2.80]},
+ {id:2,league:"DEMO CHAMPIONS CUP",
+  home:"Green Eagles",away:"Coastal Lions",
+  odds:[1.85,3.40,3.60]},
+ {id:3,league:"DEMO FOOTBALL CUP",
+  home:"River FC",away:"Mountain City",
+  odds:[2.50,3.00,2.40]}
+];
+const outcomes=["Home win","Draw","Away win"];
+const fmt=n=>"KSh "+Number(n).toLocaleString("en-KE",
+ {maximumFractionDigits:2});
+let state;
+try {
+ state=JSON.parse(localStorage.getItem("realBetDemo"));
+} catch(e) {}
+if(!state || typeof state.balance!=="number" ||
+ !Array.isArray(state.bets)) {
+ state={balance:1000,bets:[]};
+}
+let chosen=null;
+function save(){
+ localStorage.setItem("realBetDemo",JSON.stringify(state));
+ render();
+}
+function render(){
+ document.getElementById("balance").textContent=fmt(state.balance);
+ document.getElementById("matches").innerHTML=fixtures.map(f=>`
+ <div class="match">
+  <div class="league">${f.league}</div>
+  <div class="teams">${f.home} <span class="muted">vs</span>
+  ${f.away}</div>
+  <div class="odds">${f.odds.map((odd,i)=>`
+   <button class="pick ${
+    chosen && chosen.id===f.id && chosen.outcome===i
+      ?"selected":""}"
+    data-id="${f.id}" data-outcome="${i}">
+    ${outcomes[i]}<span>${odd.toFixed(2)}</span>
+   </button>`).join("")}</div>
+ </div>`).join("");
+ document.getElementById("selection").textContent=chosen
+  ?`${chosen.home} vs ${chosen.away} — ${outcomes[chosen.outcome]} @ ${chosen.odd.toFixed(2)}`
+  :"Choose an outcome above.";
+ const stake=Number(document.getElementById("stake").value);
+ document.getElementById("return").textContent=
+  chosen && stake>0 ?fmt(stake*chosen.odd):fmt(0);
+ document.getElementById("bets").innerHTML=state.bets.length
+ ?state.bets.slice().reverse().map(b=>`
+ <div class="panel">
+  <strong>${b.home} vs ${b.away}</strong>
+  <p class="muted">${outcomes[b.outcome]} @ ${b.odd.toFixed(2)}</p>
+  <div class="row"><span>Stake: ${fmt(b.stake)}</span>
+  <strong>${b.status==="Pending"?"Pending":
+    b.status==="Won"?"Won +"+fmt(b.payout):"Lost"}</strong></div>
+  ${b.status==="Pending"?`<button class="primary settle"
+    data-bet="${b.id}">Simulate result</button>`:""}
+ </div>`).join("")
+ :'<div class="panel muted">Your demo bets will appear here.</div>';
+}
+document.getElementById("matches").addEventListener("click",e=>{
+ const btn=e.target.closest("button[data-id]");
+ if(!btn)return;
+ const f=fixtures.find(x=>x.id===Number(btn.dataset.id));
+ const outcome=Number(btn.dataset.outcome);
+ chosen={id:f.id,home:f.home,away:f.away,
+  outcome,odd:f.odds[outcome]};
+ document.getElementById("message").textContent="";
+ render();
+});
+document.getElementById("stake").addEventListener("input",render);
+document.getElementById("place").addEventListener("click",()=>{
+ const stake=Number(document.getElementById("stake").value);
+ const msg=document.getElementById("message");
+ if(!chosen){msg.textContent="Choose a match outcome first.";return;}
+ if(!Number.isSafeInteger(stake)||stake<1){
+  msg.textContent="Enter a whole-number stake of at least 1.";return;
+ }
+ if(stake>state.balance){
+  msg.textContent="Not enough virtual coins in your balance.";return;
+ }
+ state.balance-=stake;
+ state.bets.push({...chosen,stake,status:"Pending",payout:0,
+  id:Date.now()+Math.random()});
+ chosen=null;
+ msg.textContent="Demo bet placed! Simulate its result below.";
+ save();
+});
+document.getElementById("bets").addEventListener("click",e=>{
+ const btn=e.target.closest(".settle");
+ if(!btn)return;
+ const bet=state.bets.find(b=>b.id===Number(btn.dataset.bet));
+ if(!bet || bet.status!=="Pending")return;
+ // Random practice result; not a real match outcome.
+ const won=Math.random()<1/bet.odd;
+ bet.status=won?"Won":"Lost";
+ bet.payout=won?Math.round(bet.stake*bet.odd*100)/100:0;
+ state.balance+=bet.payout;
+ save();
+});
+document.getElementById("reset").addEventListener("click",()=>{
+ if(confirm("Reset your demo balance and delete all demo bets?")){
+  state={balance:1000,bets:[]};
+  chosen=null;
+  document.getElementById("message").textContent="";
+  save();
+ }
+});
+render();
+</script>
+</body>
+</html>
